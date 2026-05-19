@@ -1,0 +1,24 @@
+[experiment]
+study_name = "bace"
+sample_sizes = [8]
+random_seed = 42
+
+[optimization.scope]
+n_splits = 5
+test_size = 0.7
+metric = "balanced_accuracy"
+
+[optimization.meta]
+n_splits = 5
+n_iter = 200
+metric = "balanced_accuracy"
+test_size = 0.7
+
+[dataset]
+min_length = 30
+file_path = "data/bace.csv"
+smiles_column = "mol"
+label_column = ["Class"]
+
+[paths]
+results_path = "results"

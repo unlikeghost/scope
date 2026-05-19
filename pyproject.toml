@@ -1,0 +1,30 @@
+[project]
+name = "scope"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.10.9",
+    "numpy>=2.4.4",
+    "shapely>=2.1.2",
+    "tqdm>=4.67.3",
+]
+
+[dependency-groups]
+eval = [
+    "scikit-learn>=1.8.0",
+]
+example = [
+    "ipykernel>=7.2.0",
+]
+experiments = [
+    "cmaes>=0.13.0",
+    "matplotlib>=3.10.9",
+    "pandas>=3.0.3",
+    "rdkit>=2026.3.2",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.1",
+    "shapely>=2.1.2",
+    "tqdm>=4.67.3",
+]

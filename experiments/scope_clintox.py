@@ -6,6 +6,11 @@ import numpy as np
 from scope import SCoPEDistances as SCoPE
 from scope.utils.eval_metrics import predictions_to_report
 
+from scope.utils.plot import (
+    plot_confusion_matrix,
+    plot_auc_roc,
+)
+
 from utils.settings import GetSettings
 from utils.combinations import all_subsets_str
 from utils.dataset import load_dataset, build_dataset_by_sample, build_dataset_variable
@@ -147,12 +152,12 @@ def _test(
         show=True,
         normalize=True,
     )
-    # plot_correct_predictions_by_class(
-    #     predictions=predictions,
-    #     y_true=test_y,
-    #     n_per_class=3,
-    #     save_dir=plot_path,
-    # )
+    plot_correct_predictions_by_class(
+        predictions=predictions,
+        y_true=test_y,
+        n_per_class=5,
+        save_dir=plot_path,
+    )
     plot_auc_roc(
         report,
         save_path=os.path.join(plot_path, "auc_roc.png"),

@@ -2,9 +2,15 @@ import os
 from pathlib import Path
 
 import numpy as np
-import matplotlib.pyplot as plt
 
-from scope.utils.plot import plot_prediction
+from scope.utils.plot import (
+    plot_dist_voting,
+    plot_dist_spider,
+    plot_dist_bars,
+    plot_dissimilarity_matrix,
+    plot_auc_roc as plot_auc_roc_scope,
+    plot_confusion_matrix as plot_confusion_matrix_scope,
+)
 
 
 def plot_auc_roc(
@@ -12,113 +18,43 @@ def plot_auc_roc(
     title: str = "ROC Curve",
     save_path: str | None = None,
     show: bool = False,
+    figsize: tuple[int, int] = (10, 5),
 ):
-    fpr = report.get("fpr")
-    tpr = report.get("tpr")
-    auc_roc = report.get("auc_roc")
-
-    if fpr is None or tpr is None:
-        raise ValueError("ROC curve is only available for binary classification reports.")
-
-    fpr = np.asarray(fpr)
-    tpr = np.asarray(tpr)
-
-    fig, ax = plt.subplots(figsize=(6, 5))
-
-    ax.plot(
-        fpr,
-        tpr,
-        label=f"AUC ROC = {auc_roc:.3f}",
-        linewidth=2,
+    plot_auc_roc_scope(
+        report=report,
+        title=title,
+        save_path=save_path,
+        show=show,
+        figsize=figsize,
     )
-    ax.plot(
-        [0, 1],
-        [0, 1],
-        linestyle="--",
-        color="gray",
-        label="Random",
-    )
-
-
-    ax.set_title(title)
-    ax.set_xlabel("False Positive Rate")
-    ax.set_ylabel("True Positive Rate")
-    ax.legend(loc="lower right")
-    ax.grid(alpha=0.3)
-
-    plt.tight_layout()
-
-    if save_path:
-        save_path = Path(save_path)
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=300)
-
-    if show:
-        plt.show()
-
-    plt.close(fig)
 
 def plot_confusion_matrix(
     confusion_matrix,
     normalize: bool = False,
     labels=None,
+    figsize: tuple[int, int] = (6, 5),
+    cmap: str = 'flare',
     title: str = "Confusion Matrix",
     save_path: str | None = None,
     show: bool = False,
 ):
-    cm = np.asarray(confusion_matrix)
-
-    if labels is None:
-        labels = [str(i) for i in range(cm.shape[0])]
-
-    fig, ax = plt.subplots(figsize=(6, 5))
-
-    image = ax.imshow(cm, cmap="Blues")
-    fig.colorbar(image, ax=ax)
-
-    ax.set_title(title)
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("True")
-
-    ax.set_xticks(range(len(labels)))
-    ax.set_yticks(range(len(labels)))
-    ax.set_xticklabels(labels)
-    ax.set_yticklabels(labels)
-
-    threshold = cm.max() / 2 if cm.size else 0
-
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            text_value = f"{cm[i, j]:.2f}" if normalize else str(int(cm[i, j]))
-
-            color = "white" if cm[i, j] > threshold else "black"
-
-            ax.text(
-                j,
-                i,
-                text_value,
-                ha="center",
-                va="center",
-                color=color,
-                fontsize=12,
-            )
-
-    plt.tight_layout()
-
-    if save_path:
-        save_path = Path(save_path)
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path, dpi=300)
-
-    if show:
-        plt.show()
-
-    plt.close(fig)
+   plot_confusion_matrix_scope(
+       confusion_matrix=confusion_matrix,
+       normalize=normalize,
+       labels=labels,
+       figsize=figsize,
+       cmap=cmap,
+       title=title,
+       save_path=save_path,
+       show=show,
+   )
 
 
 def plot_correct_predictions_by_class(
     predictions,
     y_true,
+    cmap: str = 'flare',
+    figsize: tuple[int, int] = (10, 5),
     n_per_class: int = 3,
     save_dir: str | None = None,
     show: bool = False,
@@ -146,17 +82,58 @@ def plot_correct_predictions_by_class(
 
     for class_label, selected_predictions in selected_by_class.items():
         for local_index, (prediction_index, prediction) in enumerate(selected_predictions, start=1):
-            save_path = None
+            dist_voting_path = None
+            dist_bars_path = None
+            dist_spider_path = None
+            dissimilarity_matrix_path = None
 
             if save_dir:
-                save_path = os.path.join(
+
+                dist_voting_path = os.path.join(
                     save_dir,
                     f"correct_prediction_class_{class_label}_"
-                    f"{local_index}_sample_{prediction_index}.png"
+                    f"{local_index}_sample_{prediction_index}_dist_voting.png"
+                )
+                dist_bars_path = os.path.join(
+                    save_dir,
+                    f"correct_prediction_class_{class_label}_"
+                    f"{local_index}_sample_{prediction_index}_dist_bars.png"
+                )
+                dist_spider_path = os.path.join(
+                    save_dir,
+                    f"correct_prediction_class_{class_label}_"
+                    f"{local_index}_sample_{prediction_index}_dist_spider.png"
+                )
+                dissimilarity_matrix_path = os.path.join(
+                    save_dir,
+                    f"correct_prediction_class_{class_label}_"
+                    f"{local_index}_sample_{prediction_index}_dissimilarity_matrix.png"
                 )
 
-            plot_prediction(
+            plot_dist_voting(
                 prediction=prediction,
-                plot=show,
-                save_path=str(save_path) if save_path else None,
+                cmap=cmap,
+                figsize=figsize,
+                save_path=dist_voting_path,
+                show=show,
+            )
+            plot_dist_bars(
+                prediction=prediction,
+                cmap=cmap,
+                figsize=figsize,
+                save_path=dist_bars_path,
+                show=show,
+            )
+            plot_dist_spider(
+                prediction=prediction,
+                cmap=cmap,
+                figsize=figsize,
+                save_path=dist_spider_path,
+                show=show,
+            )
+            plot_dissimilarity_matrix(
+                dissimilarity_matrix=prediction.dissimilarity_matrix,
+                cmap=cmap,
+                save_path=dissimilarity_matrix_path,
+                show=show,
             )

@@ -307,10 +307,8 @@ def plot_dist_voting(
     class_labels = list(prediction.distances.keys())
 
     cmap_object = sns.color_palette(cmap, as_cmap=True)
-    colors = [
-        cmap_object(0.85) if i == prediction.predicted_class else cmap_object(0.30)
-        for i in range(n_classes)
-    ]
+    fixed_levels = np.linspace(0.15, 0.85, n_classes)
+    colors = [cmap_object(fixed_levels[i]) for i in range(n_classes)]
 
     votes = [prediction.scores[i] for i in range(n_classes)]
 
@@ -378,8 +376,9 @@ def plot_dist_spider(
         dist_matrix = np.zeros_like(dist_matrix)
 
     cmap_object = sns.color_palette(cmap, as_cmap=True)
-    won_color = cmap_object(0.85)
-    lost_color = cmap_object(0.30)
+    fixed_levels = np.linspace(0.15, 0.85, n_classes)
+    class_colors = [cmap_object(fixed_levels[i]) for i in range(n_classes)]
+
 
     angles = np.linspace(0, 2 * np.pi, n_classifiers, endpoint=False).tolist()
     angles += angles[:1]
@@ -401,7 +400,7 @@ def plot_dist_spider(
         values = dist_matrix[cls_idx].tolist()
         values += values[:1]
         is_winner = cls_idx == prediction.predicted_class
-        color = won_color if is_winner else lost_color
+        color = class_colors[cls_idx]
 
         ax.plot(angles, values, color=color, linewidth=2 if is_winner else 1.2)
         ax.fill(angles, values, color=color, alpha=0.35 if is_winner else 0.1)
@@ -448,10 +447,8 @@ def plot_dist_bars(
     dist_matrix = np.array([prediction.distances[i] for i in range(n_classes)])
 
     cmap_object = sns.color_palette(cmap, as_cmap=True)
-    class_colors = [
-        cmap_object(0.85) if cls_idx == prediction.predicted_class else cmap_object(0.3)
-        for cls_idx in range(n_classes)
-    ]
+    fixed_levels = np.linspace(0.15, 0.85, n_classes)
+    class_colors = [cmap_object(fixed_levels[i]) for i in range(n_classes)]
 
     winner_per_classifier = np.argmin(dist_matrix, axis=0)
     bar_colors = [class_colors[winner] for winner in winner_per_classifier]

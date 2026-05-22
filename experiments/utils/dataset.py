@@ -126,7 +126,7 @@ def build_dataset_by_sample(
 
 def build_dataset_variable(
     dataframe: pd.DataFrame,
-    test_samples: list,
+    sample_sizes: list,
     random_seed: int = 42
 ) -> tuple[list, list, list]:
     x_, y_ = dataframe["smiles_std"].values, dataframe["target"].values
@@ -135,7 +135,7 @@ def build_dataset_variable(
     rng = np.random.default_rng(random_seed)
 
     n_total = x_.shape[0]
-    possible_sizes = np.arange(min(test_samples), max(test_samples) + 1)
+    possible_sizes = np.arange(min(sample_sizes), max(sample_sizes) + 1)
 
     sampling_sizes = np.tile(possible_sizes, int(np.ceil(n_total / len(possible_sizes))))[:n_total]
     rng.shuffle(sampling_sizes)

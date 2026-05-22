@@ -1,17 +1,19 @@
 import pickle
 import numpy as np
 
+from warnings import warn
 from shapely import convex_hull
-from typing import List, Dict, Tuple
+from abc import ABC, abstractmethod
+from typing import List, Dict, Tuple, Any
 from shapely.geometry import Point, MultiPoint, Polygon
 from shapely.geometry.base import BaseGeometry
 
-from .prediction import Prediction, GeometryMetrics
+from .prediction import Prediction, GeometryMetrics, PoligonPrediction, DistPrediction
 from .compression import DissimilarityMatrix
+from .compression.matrix import _compressor_indexes, _dissimilarity_indexes
 
 
-class SCoPE:
-
+class _SCoPE(ABC):
     def __init__(
         self,
         compressors: List[str],
@@ -28,8 +30,69 @@ class SCoPE:
         )
         self._class_weights = class_weights
 
-    @staticmethod
+    def save(self, path: str):
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, path: str):
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+
+    def predict(
+        self,
+        kw_samples: List[Dict[int, str]],
+        queries: List[str],
+    ) -> List[Prediction]:
+        dissimilarity_matrices = self._dissimilarity_matrix(
+            queries=queries,
+            supports=kw_samples,
+        )
+
+        predictions = [
+            self._predict(dissimilarity_matrix=dissimilarity_matrix)
+            for dissimilarity_matrix in dissimilarity_matrices
+        ]
+
+        return predictions
+
+    @abstractmethod
+    def _predict(
+        self,
+        dissimilarity_matrix: Dict[str, np.ndarray],
+    ) -> Any:
+        ...
+
+    @abstractmethod
+    def _get_predicted_class(
+        self,
+        scores: Dict[int, float],
+    ) -> int:
+        ...
+
+
+class SCoPEPoligon(_SCoPE):
+
+    def __init__(
+        self,
+        compressors: List[str],
+        join_string: str = ' ',
+        keep_similar: bool = False,
+        dissimilarity_metrics: List[str] = ['ncd', 'cdm'],  # noqa
+    ):
+        if len(dissimilarity_metrics) != 2:
+            raise ValueError(
+                "SCoPEPoligon only supports two dissimilarity metrics."
+            )
+        super().__init__(
+            compressors=compressors,
+            join_string=join_string,
+            keep_similar=keep_similar,
+            dissimilarity_metric_names=dissimilarity_metrics
+        )
+
     def compute_classification_score(
+        self,
         convex_hull_cluster: Polygon,
         convex_hull_query: Polygon,
         query_points: np.ndarray
@@ -85,41 +148,48 @@ class SCoPE:
             iou=iou
         )
 
-    @staticmethod
-    def _get_data(
-        dissimilarity_matrix: Dict[str, np.ndarray],
-        key: str,
-    ) -> Tuple[BaseGeometry, BaseGeometry, np.ndarray]:
-
-        query_key = key.replace('Cluster', 'Sample')
-        cluster_key = key
-
-        cluster_data = dissimilarity_matrix[cluster_key]
-        query_points_array = dissimilarity_matrix[query_key][0].T
-
-        cluster_points = np.vstack([
-            poly.T
-            for poly in cluster_data
-        ])
-
-        cluster_points = MultiPoint(cluster_points)
-        query_points = MultiPoint(query_points_array)
-
-        convex_hull_cluster = convex_hull(cluster_points)
-        convex_hull_query = convex_hull(query_points)
-
-        return convex_hull_cluster, convex_hull_query, query_points_array
-
-    @staticmethod
     def _get_predicted_class(
+        self,
         scores: Dict[int, float],
     ) -> int:
         return max(scores, key=scores.get)
 
+    @staticmethod
+    def _get_data(
+        dissimilarity_matrix: np.ndarray,
+    ) -> Tuple[BaseGeometry, BaseGeometry, np.ndarray]:
+        support_data = dissimilarity_matrix[:-1].transpose(0, 2, 1, 3)
+
+        query_data = dissimilarity_matrix[-1:][0].transpose(1, 0, 2)
+
+        query_array = query_data.reshape(
+            query_data.shape[0], -1
+        ).T
+
+        support_array = support_data.reshape(
+            support_data.shape[0], -1
+        ).T
+
+        if support_array.shape[-1] < 2:
+            warn("This method just works for 2 or more support samples.")
+            return None, None, None
+
+        support_points = np.vstack([
+            poly.T
+            for poly in support_array
+        ])
+
+        cluster_points = MultiPoint(support_points)
+        query_points = MultiPoint(query_array)
+        convex_hull_cluster = convex_hull(cluster_points)
+        convex_hull_query = convex_hull(query_points)
+
+        return convex_hull_cluster, convex_hull_query, query_array
+
     def _predict(
         self,
         dissimilarity_matrix: Dict[str, np.ndarray],
-    ) -> Prediction:
+    ) -> PoligonPrediction:
 
         scores = {}
         query_points = {}
@@ -130,10 +200,20 @@ class SCoPE:
         cluster_keys = [k for k in dissimilarity_matrix if 'Cluster' in k]
 
         for index, key in enumerate(cluster_keys):
+
             convex_hull_cluster, convex_hull_query, query_points_array = self._get_data(
-                dissimilarity_matrix=dissimilarity_matrix,
-                key=key,
+                dissimilarity_matrix=dissimilarity_matrix[key],
             )
+
+            if convex_hull_cluster is None:
+                geometric_metrics[index] = GeometryMetrics(0.0, 1.0, 0.0)
+                scores[index] = -float('inf')
+                query_points[index] = None
+                convex_hull_queries[index] = None
+                convex_hull_clusters[index] = None
+
+                continue
+
             score, geo = self.compute_classification_score(
                 convex_hull_cluster=convex_hull_cluster,
                 convex_hull_query=convex_hull_query,
@@ -146,46 +226,130 @@ class SCoPE:
             convex_hull_queries[index] = convex_hull_query
             convex_hull_clusters[index] = convex_hull_cluster
 
-        if self._class_weights:
-            scores = {
-                cls: score / self._class_weights[cls]
-                for cls, score in scores.items()
-            }
-
         predicted_class = self._get_predicted_class(scores=scores)
 
-        return Prediction(
+        return PoligonPrediction(
+            scores=scores,
+            predicted_class=predicted_class,
             convex_hull_clusters=convex_hull_clusters,
             convex_hull_queries=convex_hull_queries,
             query_points=query_points,
-            scores=scores,
-            predicted_class=predicted_class,
             geometry_metrics=geometric_metrics,
         )
 
-    def predict(
-        self,
-        kw_samples: List[Dict[int, str]],
-        queries: List[str],
-    ) -> List[Prediction]:
 
-        dissimilarity_matrices = self._dissimilarity_matrix(
-            queries=queries,
-            supports=kw_samples,
+class SCoPEDistances(_SCoPE):
+    def __init__(
+        self,
+        compressors: List[str],
+        join_string: str = ' ',
+        keep_similar: bool = False,
+        class_weights: Dict[int, float] = None,
+        dissimilarity_metrics: List[str] = ['ncd', 'cdm'],  # noqa
+    ):
+        super().__init__(
+            compressors=compressors,
+            join_string=join_string,
+            keep_similar=keep_similar,
+            dissimilarity_metric_names=dissimilarity_metrics,
+            class_weights=class_weights
         )
 
-        predictions = [
-            self._predict(dissimilarity_matrix=dissimilarity_matrix)
-            for dissimilarity_matrix in dissimilarity_matrices
+    def compute_classification_score(
+        self,
+        *args, **kwargs
+    ) -> Any:
+        ...
+
+    def _get_predicted_class(
+        self,
+        scores: Dict[int, float],
+    ) -> int:
+        ...
+
+    @staticmethod
+    def _calculate_distance(
+        support: np.ndarray,
+        query: np.ndarray,
+    ) -> np.ndarray:
+        return np.linalg.norm(support - query, axis=-1, keepdims=True)
+
+    @staticmethod
+    def _calculate_similarity(
+        support: np.ndarray,
+        query: np.ndarray,
+    ) -> np.ndarray:
+
+        dot_product = np.sum(support * query, axis=-1, keepdims=True)
+
+        norm_support = np.linalg.norm(support, axis=-1, keepdims=True)
+        norm_query = np.linalg.norm(query, axis=-1, keepdims=True)
+
+        epsilon = 1e-8
+        cosine_similarity = dot_product / (norm_support * norm_query + epsilon)
+
+        return cosine_similarity
+
+    def _predict(
+        self,
+        dissimilarity_matrix: Dict[str, np.ndarray],
+    ) -> DistPrediction:
+
+        classifier_labels = [
+            f"{c} | {m}"
+            for c in sorted(self._dissimilarity_matrix.compressor_names,
+                            key=lambda x: _compressor_indexes[x])
+            for m in sorted(self._dissimilarity_matrix.dissimilarity_metric_names,
+                            key=lambda x: _dissimilarity_indexes[x])
         ]
 
-        return predictions
+        distances_per_class = {}
+        euclidean_distances = {}
+        cosine_distances = {}
+        cluster_keys = [k for k in dissimilarity_matrix if 'Cluster' in k]
 
-    def save(self, path: str):
-        with open(path, 'wb') as f:
-            pickle.dump(self, f)
+        for index, key in enumerate(cluster_keys):
 
-    @classmethod
-    def load(cls, path: str):
-        with open(path, 'rb') as f:
-            return pickle.load(f)
+            support_data = dissimilarity_matrix[key][:-1].mean(axis=0, keepdims=True)
+
+            query_data = dissimilarity_matrix[key][-1:][0]
+
+            _, n_compressors, n_metrics, _ = support_data.shape
+
+            euc_dist = self._calculate_distance(
+                support=support_data,
+                query=query_data,
+            )
+
+            cos_dist = 1 - self._calculate_similarity(
+                support=support_data,
+                query=query_data
+            )
+
+            distances = euc_dist * cos_dist
+            distances_per_class[index] = distances.flatten().tolist()
+
+            euclidean_distances[index] = euc_dist.flatten().tolist()
+            cosine_distances[index] = cos_dist.flatten().tolist()
+
+        distances_values = np.array(list(distances_per_class.values())).T
+
+        preds_per_classifier = np.argmin(distances_values, axis=1)
+
+        votes = np.bincount(preds_per_classifier, minlength=len(cluster_keys))
+
+        votes_dict = {
+            idx: float(count) if count else 0 for idx, count in enumerate(votes)
+        }
+
+        predicted_class = np.argmax(votes)
+
+        return DistPrediction(
+            scores=votes_dict,
+            predicted_class=predicted_class.item(),
+            distances=distances_per_class,
+            wining_votes=np.max(votes).item(),
+            euclidean_distances=euclidean_distances,
+            cosine_distances=cosine_distances,
+            classifier_labels=classifier_labels,
+        )

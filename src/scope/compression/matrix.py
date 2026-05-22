@@ -147,11 +147,10 @@ class DissimilarityMatrixBase(ABC):
                 support=support
             )
 
-            cluster = cluster_dissimilarity[:-1, :]
-            sample = cluster_dissimilarity[-1:, :]
+            # cluster = cluster_dissimilarity[:-1, :]
+            # sample = cluster_dissimilarity[-1:, :]
 
-            _output[f'{self.cluster_key}{key}'] = cluster
-            _output[f'{self.sample_key}{key}'] = sample
+            _output[f'{self.cluster_key}{key}'] = cluster_dissimilarity
         end_ = time.perf_counter()
 
         output_time = end_ - start_
@@ -268,28 +267,30 @@ class DissimilarityMatrixV1(DissimilarityMatrixBase):
                         c_x2=c_x2,
                         c_x1x2=c_x1x2,
                     )
-                    score_x2x1: float = _dissimilarity_fns[_metric](
-                        c_x1=c_x2,
-                        c_x2=c_x1,
-                        c_x1x2=c_x2x1,
-                    )
+                    # score_x2x1: float = _dissimilarity_fns[_metric](
+                    #     c_x1=c_x2,
+                    #     c_x2=c_x1,
+                    #     c_x1x2=c_x2x1,
+                    # )
 
                     _output[xi, c_i, m_i, xj] = score_x1x2
-                    _output[xj, c_i, m_i, xi] = score_x2x1
+                    _output[xj, c_i, m_i, xi] = score_x1x2
+                    # _output[xj, c_i, m_i, xi] = score_x2x1
 
         nan_mask_matrix = ~np.isnan(_output)
 
         n_items = len(support)
 
         if self.keep_similar:
-            n_features = self._n_compressors * (n_items + 1)
+            n_features = (n_items + 1)
         else:
-            n_features = self._n_compressors * n_items
+            n_features = n_items
 
         result = _output[nan_mask_matrix]
 
         result_matrix = result.reshape(
             n_items + 1,
+            self._n_compressors,
             self._n_metrics,
             n_features
         )

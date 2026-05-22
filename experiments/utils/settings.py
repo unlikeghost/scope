@@ -12,10 +12,9 @@ class ExperimentSettings:
 
 class ScopeOptimizationSettings:
     def __init__(self, cfg):
-        self.n_splits:  int        = cfg["n_splits"]
         self.metric:    str        = cfg["metric"]
         self.test_size:   float                = cfg["test_size"]
-
+        self.n_splits:   int                  = cfg["n_splits"]
 
 class MetaOptimizationSettings:
     def __init__(self, cfg):

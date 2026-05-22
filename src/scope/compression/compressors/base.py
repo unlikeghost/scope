@@ -14,7 +14,7 @@ class BaseCompressor(ABC):
         if not 1 <= compression_level <= 9:
             raise ValueError("Compression level must be between 1 and 9")
 
-        self.encoding : str = "utf-8-sig"
+        self.encoding : str = "utf-8"
 
         self._compressor_name: str = compressor_name
         self._compression_level: int = compression_level

@@ -26,24 +26,21 @@ META_MODELS = {
     "lr": Pipeline([
         ("scaler", StandardScaler()),
         ("clf", LogisticRegression(
-            solver="saga",
             random_state=42,
-            class_weight="balanced",
             n_jobs=-1,
+            class_weight="balanced"
         ),)
     ]),
     "svm": Pipeline([
         ("scaler", StandardScaler()),
         ("clf", SVC(
             probability=True,
-            class_weight="balanced",
             random_state=42,
+            class_weight="balanced"
         )),
     ]),
     "rf": Pipeline([
-    ("scaler", StandardScaler()),
         ("clf", RandomForestClassifier(
-            class_weight="balanced",
             random_state=42,
         ))
     ]),
@@ -51,26 +48,26 @@ META_MODELS = {
 
 META_PARAM_DISTRIBUTIONS = {
     "lr": {
-        "clf__solver": ["saga", "lbfgs", "libliear", "sag"],
-        "clf__dual": [False, True],
-        "clf__tol": loguniform(1e-3, 1),
-        "clf__C": loguniform(1e-3, 1),
-        "clf__penalty": ["l2", "l1", "elasticnet"],
+        "clf__solver": ["saga", "lbfgs", "liblinear", "sag"],
+        "clf__penalty": ["l1", "l2", "elasticnet"],
+        "clf__l1_ratio": loguniform(0.01, 0.9),
+        "clf__tol": loguniform(1e-4, 1e-2),
+        "clf__C": loguniform(1e-3, 100),
     },
     "svm": {
-        "clf__C": loguniform(1e-3, 1),
-        "clf__kernel": ["rbf", "sigmoid"],
+        "clf__kernel": ["rbf", "poly", "sigmoid"],
         "clf__gamma": ["scale", "auto"],
-        "clf__tol": loguniform(1e-3, 1),
+        "clf__C": loguniform(1e-3, 100),
     },
     "rf": {
-        "clf__n_estimators": randint(50, 300),
-        "clf__max_depth": [None, 3, 5, 10],
+        "clf__class_weight": ["balanced", "balanced_subsample"],
+        "clf__n_estimators": randint(50, 200),
+        "clf__max_depth": randint(2, 20),
         "clf__min_samples_split": randint(2, 20),
-        "clf__min_samples_leaf": randint(1, 10),
+        "clf__min_samples_leaf": randint(1, 12),
+        "clf__max_features": ["sqrt", "log2", None],
     },
 }
-
 
 @dataclass
 class FoldResult:
@@ -132,7 +129,7 @@ def _run_fold(
             score=report[metric],
             report=report
         )
-    except ValueError:
+    except ValueError as error:
         return FoldResult(fold=fold_idx, score=0.0, report=None)
 
 def random_search_meta_kfold(
@@ -208,6 +205,8 @@ def random_search_meta_kfold(
             }
         )
 
-    results.sort(key=lambda r: r.mean_score, reverse=True)
+    results.sort(
+        key=lambda r: r.mean_score - r.std_score, reverse=True
+    )
 
     return results

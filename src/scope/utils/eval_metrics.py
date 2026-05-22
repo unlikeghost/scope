@@ -15,7 +15,6 @@ from ..prediction import Prediction
 
 try:
     from sklearn.metrics import (
-        average_precision_score,
         balanced_accuracy_score,
         confusion_matrix,
         f1_score,
@@ -82,14 +81,9 @@ def _binary_metrics(y_true: np.ndarray, y_prob: np.ndarray) -> Report:
         "tpr": tpr,
         "thresholds": thr,
         "auc_roc": _safe(
-            lambda: roc_auc_score(y_true, y_prob, average="weighted"),
+            lambda: roc_auc_score(y_true, y_prob, average="macro"),
             default=0.5,
             label="ROC AUC"
-        ),
-        "ap_score": _safe(
-            lambda: average_precision_score(y_true, y_prob, average="weighted"),
-            default=0.0,
-            label="average precision"
         ),
     }
 
@@ -100,7 +94,7 @@ def _shared_metrics(
 ) -> Report:
     return {
         "f1": _safe(
-            lambda: f1_score(y_true, y_pred, average="weighted"),
+            lambda: f1_score(y_true, y_pred, average="macro"),
             default=0.0,
             label="F1"
         ),
@@ -160,7 +154,7 @@ def make_evaluation_report(
     """
     y_true  = np.asarray(y_true)
     y_pred  = np.asarray(y_pred)
-    y_score = np.asarray(y_score)
+    y_score = np.asarray(y_score).astype(np.float64)
 
     n_classes = y_score.shape[1] if y_score.ndim > 1 else 1
     is_binary = n_classes == 2

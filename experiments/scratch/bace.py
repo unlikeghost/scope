@@ -34,7 +34,7 @@ def set_seed(seed: int):
 
 def get_dataset(
     settings: GetSettings,
-    search_size: float
+    search_size: float,
 ):
     search, test = load_dataset(
         dataset_path=settings.dataset.file_path,
@@ -57,21 +57,12 @@ def get_dataset(
         random_seed=random_seed
     )
 
-    search_queries = search_queries[sample_sizes[0]]
-    search_y = search_y[sample_sizes[0]]
-    search_supports = search_supports[sample_sizes[0]]
-
-    test_queries = test_queries[sample_sizes[0]]
-    test_y = test_y[sample_sizes[0]]
-    test_supports = test_supports[sample_sizes[0]]
-
     return (search_queries, search_y, search_supports), (test_queries, test_y, test_supports)
 
 
 def print_results(report) -> None:
     print(f"\nResultados finales en test:")
     print(f"  auc_roc              : {report['auc_roc']}")
-    print(f"  ap_score              : {report['ap_score']}")
     print(f"  f1              : {report['f1']}")
     print(f"  mcc              : {report['mcc']}")
     print(f"  balanced_accuracy              : {report['balanced_accuracy']}")
@@ -93,6 +84,7 @@ def search_scope(
     settings: GetSettings,
     search_dataset,
     test_dataset,
+    sample_size: int
 ) -> SCoPE:
 
     search_queries, search_y, search_supports = search_dataset
@@ -108,11 +100,13 @@ def search_scope(
     metric = settings.optimization.scope.metric
     report_path = os.path.join(
         settings.optimization_path,
-        "scope"
+        "scope",
+        f"{sample_size}"
     )
     plot_path = os.path.join(
         settings.plots_path,
-        "scope"
+        "scope",
+        f"{sample_size}"
     )
 
     all_compressors = [
@@ -127,11 +121,6 @@ def search_scope(
         "join_string": [" "],
         "keep_similar": [True, False],
         "class_weights": [None, class_weights],
-        "dissimilarity_metric_names": [
-            ["ncd", "cdm"],
-            ["ncd", "clm"],
-            ["cdm", "clm"],
-        ],
     }
 
     results = grid_search(
@@ -180,7 +169,7 @@ def search_scope(
     plot_correct_predictions_by_class(
         predictions=predictions,
         y_true=test_y,
-        n_per_class=sample_sizes[0],
+        n_per_class=sample_size,
         save_dir=plot_path,
     )
 
@@ -200,6 +189,7 @@ def search_meta(
     settings: GetSettings,
     search_dataset,
     test_dataset,
+    sample_size: int
 ):
     meta_model = META_MODELS[meta_name]
     param_distributions = META_PARAM_DISTRIBUTIONS[meta_name]
@@ -215,11 +205,13 @@ def search_meta(
         settings.optimization_path,
         "meta",
         meta_name,
+        f"{sample_size}"
     )
     plot_path = os.path.join(
         settings.plots_path,
         "meta",
         meta_name,
+        f"{sample_size}"
     )
 
     results = random_search_meta_kfold(
@@ -294,7 +286,7 @@ def search_meta(
     plot_correct_predictions_by_class(
         predictions = predictions_test,
         y_true      = test_y,
-        n_per_class = sample_sizes[0],
+        n_per_class = sample_size,
         save_dir    = plot_path,
     )
     plot_auc_roc(
@@ -305,38 +297,57 @@ def search_meta(
 
 
 if __name__ == "__main__":
-    settings = GetSettings("settings/hiv.toml")
+    settings = GetSettings("settings/bace.toml")
 
     random_seed = settings.experiment.random_seed
     sample_sizes = settings.experiment.sample_sizes
 
     set_seed(random_seed)
 
-    search, test = get_dataset(
+    search_data, test_data = get_dataset(
         settings,
         search_size=settings.optimization.scope.test_size,
     )
 
-    scope_model = search_scope(
-        settings=settings,
-        search_dataset=search,
-        test_dataset=test,
-    )
+    search_queries_dict, search_y_dict, search_supports_dict = search_data
+    test_queries_dict, test_y_dict, test_supports_dict = test_data
 
-    search, test = get_dataset(
-        settings,
-        search_size=settings.optimization.meta.test_size,
-    )
 
-    for meta_name in META_MODELS:
-        print("="*60)
-        print(f"{meta_name}")
-        search_meta(
-            meta_name=meta_name,
-            scope_model=scope_model,
+    for sample_size in sample_sizes:
+        print(f"# Samples: {sample_size}")
+        print("="*120)
+
+        search = (
+            search_queries_dict[sample_size],
+            search_y_dict[sample_size],
+            search_supports_dict[sample_size]
+        )
+        test = (
+            test_queries_dict[sample_size],
+            test_y_dict[sample_size],
+            test_supports_dict[sample_size]
+        )
+
+        scope_model = search_scope(
             settings=settings,
             search_dataset=search,
             test_dataset=test,
+            sample_size=sample_size,
         )
-        print("=" * 60)
-        print("\n")
+
+        for meta_name in META_MODELS:
+            print("="*60)
+            print(f"{meta_name}")
+            search_meta(
+                meta_name=meta_name,
+                scope_model=scope_model,
+                settings=settings,
+                search_dataset=search,
+                test_dataset=test,
+                sample_size=sample_size
+            )
+            print("=" * 60)
+            print("\n")
+
+        print()
+        print("="*120)

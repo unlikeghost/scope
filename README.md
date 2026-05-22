@@ -2,11 +2,11 @@
 
 **Author:** Jesus Alan Hernadez Galvan
 
-SCoPE is a Python-based tool and library designed for data classification using dissimilarity matrices based on text or sequence compression algorithms (such as NCD and CDM). **It is a training-free model**: instead of relying on a traditional training phase, SCoPE leverages information theory concepts to predict the class of a query by evaluating how "compressible" it is alongside different support samples.
+SCoPE is a Python-based tool and library designed for data classification using dissimilarity metrics (such as NCD and CDM) computed via text or sequence compression algorithms (e.g., gzip, zlib, bz2). **It is a training-free model**: instead of relying on a traditional training phase, SCoPE leverages information theory concepts to predict the class of a query by evaluating how "compressible" it is alongside different support samples.
 
 ## 🧠 How does the prediction work?
 
-The prediction process in SCoPE revolves around the **SCoPEDistances** architecture. It starts by generating a **Dissimilarity Matrix** combining support samples and the query using multiple compression algorithms. 
+The prediction process in SCoPE revolves around the **SCoPEDistances** architecture. It starts by generating a **Dissimilarity Matrix** combining support samples and the query using dissimilarity metrics based on multiple compression algorithms (e.g., gzip, zlib, bz2). 
 
 Once the matrix is computed, SCoPEDistances uses distance metrics (such as Euclidean distance) and similarity metrics (such as Cosine similarity) to create an ensemble voting system based on the individual decisions of each compressor and metric combination.
 
@@ -26,7 +26,7 @@ flowchart TD
     
     subgraph Compression["1. Compression Phase"]
         DM[Compute Dissimilarity Matrix]:::process
-        Comp[Using Compressors e.g., NCD, CDM]:::process
+        Comp[Using Metrics e.g., NCD, CDM <br/> via gzip, zlib, bz2]:::process
     end
 
     subgraph FeatureExtraction["2. Feature Representation"]

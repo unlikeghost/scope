@@ -1,4 +1,4 @@
-# SCOoPE (Support Compression-based Prediction Engine)
+# SCoPE (Support Compression-based Prediction Engine)
 
 **Author:** Jesus Alan Hernadez Galvan
 

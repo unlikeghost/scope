@@ -14,11 +14,56 @@ Below is a flowchart summarizing the internal prediction pipeline:
 
 ```mermaid
 flowchart TD
-    A[Support Samples & Query] --> B[Compute Dissimilarity Matrix <br> using Compressors e.g., NCD, CDM]
-    B --> E1[Extract Features / Centroids <br> from Dissimilarity Matrix]
-    E1 --> E2[Calculate Distances <br> Euclidean & Cosine vs Query]
-    E2 --> E3[Voting System <br> across multiple base classifiers]
-    E3 --> F((Final Predicted Class))
+    %% Styling
+    classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef process fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef metric fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef decision fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef output fill:#fce4ec,stroke:#c2185b,stroke-width:3px;
+
+    %% Nodes
+    In([Support Samples & Query]):::input
+    
+    subgraph Compression["1. Compression Phase"]
+        DM[Compute Dissimilarity Matrix]:::process
+        Comp[Using Compressors e.g., NCD, CDM]:::process
+    end
+
+    subgraph FeatureExtraction["2. Feature Representation"]
+        Centroids[Extract Support Cluster Centroids]:::process
+        QueryFeat[Extract Query Features]:::process
+    end
+
+    subgraph DistanceCalculation["3. Distance Metrics"]
+        Euc[Euclidean Distance]:::metric
+        Cos[Cosine Distance]:::metric
+        Combined[Combined Distance <br/> Euc &times; Cos]:::metric
+    end
+
+    subgraph EnsembleDecision["4. Ensemble & Voting"]
+        Classifiers[Base Classifiers Predictions <br/> per Compressor & Metric]:::decision
+        Vote[Majority Voting System]:::decision
+    end
+
+    Out(((Final Predicted Class))):::output
+
+    %% Edges
+    In --> DM
+    DM -.-> Comp
+    DM --> Centroids
+    DM --> QueryFeat
+    
+    Centroids --> Euc
+    QueryFeat --> Euc
+    Centroids --> Cos
+    QueryFeat --> Cos
+    
+    Euc --> Combined
+    Cos --> Combined
+    
+    Combined --> Classifiers
+    Classifiers --> Vote
+    Vote --> Out
 ```
 
 *(Note: Spatial evaluation approaches using Convex Hulls, such as `SCoPEPoligon`, are currently planned for future work).*

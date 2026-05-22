@@ -15,6 +15,7 @@ class GeometryMetrics:
 class Prediction:
     scores: Dict[int, float]
     predicted_class: int
+    dissimilarity_matrix:  Dict[str, np.ndarray]
 
 
 @dataclass(frozen=True)

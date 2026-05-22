@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import numpy as np
 import seaborn as sns
 from typing import Dict
@@ -6,7 +9,6 @@ from matplotlib.patches import Patch
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from torch.distributed._pycute import layout
 
 from ..prediction import PoligonPrediction, DistPrediction
 
@@ -105,18 +107,17 @@ def plot_polygon_prediction(
 
 def plot_dissimilarity_matrix(
     dissimilarity_matrix: Dict[str, np.ndarray],
-    cmap: str = 'rocket',
+    cmap: str = 'flare',
     show: bool = False,
     save_path: str | None = None
 ):
     cluster_keys = [k for k in dissimilarity_matrix if 'Cluster' in k]
-    n_clusters = len(cluster_keys)
     sample = dissimilarity_matrix[cluster_keys[0]]
 
     _, n_compressors, n_metrics, n_classes = sample.shape
 
-    n_rows = n_clusters * n_metrics
-    n_columns = n_compressors
+    n_rows = n_metrics * n_compressors
+    n_columns = len(cluster_keys)
 
     fig, ax = plt.subplots(
         nrows=n_rows,
@@ -137,23 +138,24 @@ def plot_dissimilarity_matrix(
     row_vmaxs = {}
 
     row_idx = 0
-    for key in cluster_keys:
-        for metric_idx in range(n_metrics):
+    for metric_idx in range(n_metrics):
+        for comp_idx in range(n_compressors):
             row_data = [
                 dissimilarity_matrix[key][:, comp_idx, metric_idx, :]
-                for comp_idx in range(n_compressors)
+                for key in cluster_keys
             ]
             row_vmins[row_idx] = np.concatenate(row_data).min()
             row_vmaxs[row_idx] = np.concatenate(row_data).max()
             row_idx += 1
 
+    # Render heatmaps onto the structured grid
     row_idx = 0
-    for class_idx, key in enumerate(cluster_keys):
-        for metric_idx in range(n_metrics):
+    for metric_idx in range(n_metrics):
+        for compressor_idx in range(n_compressors):
             vmin = row_vmins[row_idx]
             vmax = row_vmaxs[row_idx]
 
-            for compressor_idx in range(n_compressors):
+            for class_idx, key in enumerate(cluster_keys):
                 metric = dissimilarity_matrix[key][:, compressor_idx, metric_idx, :]
 
                 support_data = metric[:-1]
@@ -161,7 +163,7 @@ def plot_dissimilarity_matrix(
                 labels = [f'Support {n}' for n in range(support_data.shape[0])] + ['Query']
                 combined_heatmap = np.vstack([support_data, query_data])
 
-                current_ax = ax[row_idx, compressor_idx]
+                current_ax = ax[row_idx, class_idx]
 
                 sns.heatmap(
                     combined_heatmap,
@@ -224,13 +226,11 @@ def plot_auc_roc(
     ax.fill_between(fpr, tpr, alpha=0.08)
 
     ax.spines[['top', 'right']].set_visible(False)
-    ax.spines['left'].set_color('#cccccc')
     ax.spines['left'].set_linewidth(0.8)
-    ax.spines['bottom'].set_color('#cccccc')
     ax.spines['bottom'].set_linewidth(0.8)
 
-    ax.tick_params(axis='x', labelsize=8, labelcolor='#888888', direction='out')
-    ax.tick_params(axis='y', labelsize=8, labelcolor='#888888', direction='out')
+    ax.tick_params(axis='x', labelsize=8, direction='out')
+    ax.tick_params(axis='y', labelsize=8, direction='out')
     ax.grid(alpha=0.2, linewidth=0.6, color='gray')
     ax.set_axisbelow(True)
 
@@ -250,8 +250,8 @@ def plot_confusion_matrix(
     confusion_matrix,
     normalize: bool = False,
     labels=None,
-    cmap: str = 'rocket',
-    figsize: tuple[int, int] = (10, 5),
+    cmap: str = 'flare',
+    figsize: tuple[int, int] = (6, 6),
     title: str = "Confusion Matrix",
     save_path: str | None = None,
     show: bool = False,
@@ -297,7 +297,7 @@ def plot_confusion_matrix(
 
 def plot_dist_voting(
     prediction: DistPrediction,
-    cmap: str = 'rocket',
+    cmap: str = 'flare',
     figsize: tuple[int, int] = (7, 5),
     show: bool = False,
     save_path: str | None = None
@@ -356,7 +356,7 @@ def plot_dist_voting(
 
 def plot_dist_spider(
     prediction: DistPrediction,
-    cmap: str = 'rocket',
+    cmap: str = 'flare',
     figsize: tuple[int, int] = (10, 5),
     show: bool = False,
     save_path: str | None = None
@@ -368,7 +368,14 @@ def plot_dist_spider(
     classifier_labels = prediction.classifier_labels
 
     dist_matrix = np.array([prediction.distances[i] for i in range(n_classes)])
-    dist_matrix = (dist_matrix - np.mean(dist_matrix)) / np.std(dist_matrix)
+    dist_matrix = dist_matrix.max() - dist_matrix
+
+    min_val = dist_matrix.min()
+    max_val = dist_matrix.max()
+    if max_val != min_val:
+        dist_matrix = (dist_matrix - min_val) / (max_val - min_val)
+    else:
+        dist_matrix = np.zeros_like(dist_matrix)
 
     cmap_object = sns.color_palette(cmap, as_cmap=True)
     won_color = cmap_object(0.85)
@@ -377,15 +384,17 @@ def plot_dist_spider(
     angles = np.linspace(0, 2 * np.pi, n_classifiers, endpoint=False).tolist()
     angles += angles[:1]
 
-    r_max = np.abs(dist_matrix).max() * 1.2
+    r_max = dist_matrix.max() * 1.2
+    r_min = 0
 
     fig, axes = plt.subplots(
         1, n_classes,
         figsize=figsize,
         subplot_kw=dict(polar=True),
-        layout='constrained'
+        layout='tight'
     )
     axes = np.array(axes).flatten()
+    fig.set_layout_engine(layout='tight', w_pad=4.5)
 
     for cls_idx in range(n_classes):
         ax = axes[cls_idx]
@@ -398,14 +407,13 @@ def plot_dist_spider(
         ax.fill(angles, values, color=color, alpha=0.35 if is_winner else 0.1)
         ax.scatter(angles[:-1], values[:-1], color=color, s=30 if is_winner else 20, zorder=5, linewidths=0)
 
-        ax.set_ylim(-r_max, r_max)
+        ax.set_ylim(r_min, r_max)
         ax.spines['polar'].set_visible(False)
         ax.grid(color='gray', alpha=0.3, linewidth=0.6)
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(classifier_labels, fontsize=7)
+        ax.set_xticklabels(classifier_labels, fontsize=7.4)
         ax.tick_params(axis='x', pad=10)
-        ax.tick_params(axis='y', labelsize=5, labelcolor='#888888')
-
+        ax.tick_params(axis='y', labelsize=5, labelcolor='#111111')
         ax.set_title(
             f"Class {class_labels[cls_idx]}",
             fontsize=8, pad=12,
@@ -413,7 +421,7 @@ def plot_dist_spider(
         )
 
     fig.suptitle(
-        f"Distance profile per class",
+        f"Class Separation Profiles",
         fontsize=13,
     )
 
@@ -428,7 +436,7 @@ def plot_dist_spider(
 
 def plot_dist_bars(
     prediction: DistPrediction,
-    cmap: str = 'rocket',
+    cmap: str = 'flare',
     figsize: tuple[int, int] = (10, 5),
     show: bool = False,
     save_path: str | None = None
@@ -448,31 +456,24 @@ def plot_dist_bars(
     winner_per_classifier = np.argmin(dist_matrix, axis=0)
     bar_colors = [class_colors[winner] for winner in winner_per_classifier]
 
-    # Diferencia direccional: clase 0 − clase 1
     diff = dist_matrix[0] - dist_matrix[1]
 
     fig, ax = plt.subplots(figsize=figsize, layout='tight')
 
-    bars = ax.barh(classifier_labels, diff, color=bar_colors, edgecolor='white', linewidth=1.2)
+    ax.barh(classifier_labels, diff, color=bar_colors, edgecolor='white', linewidth=1.2)
     ax.axvline(0, color='gray', linewidth=0.8, linestyle='--')
 
     x_min, x_max = min(diff), max(diff)
     x_range = x_max - x_min
-    offset = x_range * 0.02
+    if x_range == 0:
+        x_range = abs(x_min) if x_min != 0 else 1.0
 
-    for bar, d, winner in zip(bars, diff, winner_per_classifier):
-        ha_pos = 'right' if d < 0 else 'left'
-        text_x = d - offset if d < 0 else d + offset
-        ax.text(
-            text_x,
-            bar.get_y() + bar.get_height() / 2,
-            f'{class_labels[winner]}  {d:.3f}',
-            va='center', ha=ha_pos,
-            fontsize=8,
-            color=class_colors[winner]
-        )
+    offset = x_range * 0.2
+    xlim_left = min(x_min - offset, -offset)
+    xlim_right = max(x_max + offset, offset)
 
-    ax.set_xlim(x_min - x_range * 0.2, x_max + x_range * 0.2)
+    ax.set_xlim(xlim_left, xlim_right)
+
     ax.spines[['top', 'right']].set_visible(False)
     ax.tick_params(axis='x', labelsize=7)
     ax.tick_params(axis='y', labelsize=8)

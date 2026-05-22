@@ -235,6 +235,7 @@ class SCoPEPoligon(_SCoPE):
             convex_hull_queries=convex_hull_queries,
             query_points=query_points,
             geometry_metrics=geometric_metrics,
+            dissimilarity_matrix=dissimilarity_matrix,
         )
 
 
@@ -352,4 +353,5 @@ class SCoPEDistances(_SCoPE):
             euclidean_distances=euclidean_distances,
             cosine_distances=cosine_distances,
             classifier_labels=classifier_labels,
+            dissimilarity_matrix=dissimilarity_matrix,
         )

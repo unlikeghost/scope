@@ -2,11 +2,11 @@
 
 **Author:** Jesus Alan Hernadez Galvan
 
-ScOPE is a Python-based tool and library designed for data classification using dissimilarity matrices based on text or sequence compression algorithms (such as NCD and CDM). Instead of relying on traditional manual vector feature extraction, ScOPE leverages information theory concepts to predict the class of a query by evaluating how "compressible" it is alongside different support samples.
+SCoPE is a Python-based tool and library designed for data classification using dissimilarity matrices based on text or sequence compression algorithms (such as NCD and CDM). **It is a training-free model**: instead of relying on a traditional training phase, SCoPE leverages information theory concepts to predict the class of a query by evaluating how "compressible" it is alongside different support samples.
 
 ## 🧠 How does the prediction work?
 
-The prediction process in ScOPE revolves around the **SCoPEDistances** architecture. It starts by generating a **Dissimilarity Matrix** combining support samples and the query using multiple compression algorithms. 
+The prediction process in SCoPE revolves around the **SCoPEDistances** architecture. It starts by generating a **Dissimilarity Matrix** combining support samples and the query using multiple compression algorithms. 
 
 Once the matrix is computed, SCoPEDistances uses distance metrics (such as Euclidean distance) and similarity metrics (such as Cosine similarity) to create an ensemble voting system based on the individual decisions of each compressor and metric combination.
 
@@ -70,7 +70,7 @@ flowchart TD
 
 ## 📊 Experimental Results
 
-ScOPE has been evaluated on various molecular datasets such as ClinTox, BACE, and BBBP. The following visualizations demonstrate the model's behavior and performance during experiments on the **ClinTox** dataset:
+SCoPE has been evaluated on various molecular datasets such as ClinTox, BACE, and BBBP. For these evaluations, **70% of the data was used for testing/evaluation**, while the remaining **30% was used for parameter search** (experimenting with various numbers of samples for the support set). The following visualizations demonstrate the model's behavior and performance during experiments on the **ClinTox** dataset:
 
 ### Dissimilarity Matrix
 Visual representation of the pairwise dissimilarities computed between support samples and a query across different compression methods.

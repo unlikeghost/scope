@@ -15,11 +15,11 @@ Below is a flowchart summarizing the internal prediction pipeline:
 ```mermaid
 flowchart TD
     %% Styling
-    classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef process fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
-    classDef metric fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
-    classDef decision fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef output fill:#fce4ec,stroke:#c2185b,stroke-width:3px;
+    classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000;
+    classDef process fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#000;
+    classDef metric fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000;
+    classDef decision fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000;
+    classDef output fill:#fce4ec,stroke:#c2185b,stroke-width:3px,color:#000;
 
     %% Nodes
     In([Support Samples & Query]):::input

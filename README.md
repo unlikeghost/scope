@@ -82,6 +82,11 @@ Evaluation of the overall predictive performance and class balance on the test d
 
 ![Normalized Confusion Matrix](assets/confusion_matrix_normalized.png)
 
+### AUC-ROC Curve
+Performance measurement for the classification model at various threshold settings, illustrating its diagnostic ability:
+
+![AUC-ROC](assets/auc_roc.png)
+
 ### Voting Analysis (SCoPEDistances)
 Shows how different underlying classifiers (based on different combinations of distance metrics and compressors) contribute and vote towards the final class decision:
 

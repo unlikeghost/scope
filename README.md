@@ -97,6 +97,34 @@ Representation of the multidimensional dissimilarity space of the query with res
 
 ![Spider Plot](assets/spider_plot.png)
 
+### Parameter Search Validation: Learning Curve
+![Validation Learning Curve](assets/validation_learning_curve.png)
+
+### Ablation Study: Impact of 'keep_similar'
+![Keep Similar Ablation](assets/keep_similar_ablation.png)
+
+### Optimizer Stability Scatter
+
+![Optimizer Stability Scatter](assets/optimizer_stability_scatter.png)
+
+### Synergy Matrix: Compressor vs Metric
+
+
+![Compressor Metric Synergy Heatmap](assets/compressor_metric_synergy_heatmap.png)
+
+### Final Test Evaluation (Multimetric)
+
+![Final Test Evaluation](assets/final_test_evaluation.png)
+
+### Test Error Rates Evolution
+
+
+![Test Error Rates](assets/test_error_rates.png)
+
+### Generalization Gap: Search vs Test
+
+![Search vs Test Gap](assets/search_vs_test_gap.png)
+
 ## 🛠️ Project Structure
 
 - `src/scope/`: Main source code, defining the compression matrix logic (`compression`), prediction methods, and SCoPE model classes.

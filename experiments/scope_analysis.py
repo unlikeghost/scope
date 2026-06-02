@@ -108,7 +108,7 @@ def plot_learning_curve(
     )
 
     plt.xlim(2, 21)
-    plt.xticks(np.arange(2, 21, 1))
+    plt.xticks(np.arange(3, 21, 1))
     plt.title(
         f"[{dataset_name.capitalize()}] Parameter Search Validation: Best Score vs Sample Size",
         fontsize=12, fontweight='bold', pad=15
@@ -189,7 +189,7 @@ def plot_final_test_metrics(
 
     for ax in g.axes.flat:
         ax.set_xlim(2, 21)
-        ax.set_xticks(np.arange(2, 21, 2))
+        ax.set_xticks(np.arange(3, 21, 2))
 
     plt.suptitle(
         f"Dataset: {dataset_name.capitalize()} (Final Test Evaluation)",
@@ -237,7 +237,7 @@ def plot_validation_vs_test(
     )
 
     plt.xlim(2, 21)
-    plt.xticks(np.arange(2, 21, 1))
+    plt.xticks(np.arange(3, 21, 1))
     plt.title(
         f"[{dataset_name.capitalize()}] Generalization Gap: Parameter Search vs Final Test ({target_metric})",
         fontsize=12, fontweight='bold', pad=15
@@ -271,7 +271,7 @@ def plot_error_rates_evolution(
     )
 
     plt.xlim(2, 21)
-    plt.xticks(np.arange(2, 21, 1))
+    plt.xticks(np.arange(3, 21, 1))
     plt.title(
         f"[{dataset_name.capitalize()}] Error Analysis: False Positive vs False Negative Rates (Final Test Evaluation)",
         fontsize=12,

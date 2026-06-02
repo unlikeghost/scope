@@ -66,6 +66,20 @@ flowchart TD
     Vote --> Out
 ```
 
+### Dissimilarity Matrix
+For each candidate class, SCoPE combines the query sample with the class support set and evaluates all pairwise relationships using a collection of compressors and distance metrics. The resulting pairwise scores are organized into a structured dissimilarity matrix, where each entry represents the dissimilarity between two samples under a specific compressor-metric combination.
+
+This matrix serves as a compact representation of the relational structure between the query and the support examples, capturing both intra-class consistency and query-to-support similarity patterns.
+
+![Dissimilarity Matrix](diagrams/done/dissimilarity%20matrix%20(done).png)
+
+### Prediction Model
+The prediction stage operates on the dissimilarity matrices generated for every candidate class. For each class, SCoPE computes multiple distance functions between the query and supports, producing a collection of distance scores.
+
+The minimum score obtained for each feature across all classes is used as a vote. These votes are then aggregated, and the class receiving the highest number of votes is selected as the final prediction. This voting-based strategy allows SCoPE to leverage diverse compressor-distance combinations while remaining robust to noisy or less informative features.
+![Prediction Model](diagrams/done/SCoPE%20distances%20(done).png)
+
+
 *(Note: Spatial evaluation approaches using Convex Hulls, such as `SCoPEPoligon`, are currently planned for future work).*
 
 ## 📊 Experimental Results

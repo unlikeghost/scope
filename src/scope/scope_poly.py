@@ -1,3 +1,5 @@
+from traceback import print_tb
+
 import numpy as np
 
 from shapely import convex_hull
@@ -99,29 +101,32 @@ class SCoPEPolygon(_SCoPE):
     ) -> Tuple[BaseGeometry, BaseGeometry, np.ndarray]:
 
         ns, nc, nm, nf = dissimilarity_matrix.shape
-        transposed = dissimilarity_matrix.transpose(0, 1, 3, 2)
+        dissimilarity_matrix = dissimilarity_matrix.transpose(0, 2, 1, 3)
+
+        dissimilarity_matrix_reshaped = dissimilarity_matrix.reshape(ns, nm, nc * nf)
+
+        # support_data = dissimilarity_matrix_reshaped[:-1].mean(axis=0, keepdims=True)
+        support_data = dissimilarity_matrix_reshaped[:-1]
+
+        query_data = dissimilarity_matrix_reshaped[-1:]
+
+        support_points = np.vstack([
+            poly.T
+            for poly in support_data
+        ])
         
-        dissimilarity_matrix_reshaped = transposed.reshape(ns, nc * nf, nm)
-        
-        support_data = dissimilarity_matrix_reshaped[:-1].transpose(2, 1, 0)
-        support_data = np.mean(support_data, axis=-1)
-        support_data = support_data.reshape(
-            support_data.shape[0], -1
-        ).T
-                
-        query_data = dissimilarity_matrix_reshaped[-1:][0]
+        query_points = query_data[0].T
 
         if support_data.shape[-1] < 2:
             raise ValueError("This method just works for 2 or more support samples.")
 
-    
-        cluster_points = MultiPoint(support_data)
-        query_points = MultiPoint(query_data)
+        support_points = MultiPoint(support_points)
+        query_points_data = MultiPoint(query_points)
 
-        convex_hull_cluster = convex_hull(cluster_points)
-        convex_hull_query = convex_hull(query_points)
+        convex_hull_cluster = convex_hull(support_points)
+        convex_hull_query = convex_hull(query_points_data)
 
-        return convex_hull_cluster, convex_hull_query, query_data
+        return convex_hull_cluster, convex_hull_query, query_points
 
     def _predict(
         self,
@@ -149,7 +154,7 @@ class SCoPEPolygon(_SCoPE):
             )
 
             geometric_metrics[index] = geo
-            scores[index] = score
+            scores[index] = -score
             query_points[index] = query_points_array
             convex_hull_queries[index] = convex_hull_query
             convex_hull_clusters[index] = convex_hull_cluster

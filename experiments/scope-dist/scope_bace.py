@@ -3,15 +3,18 @@ import random
 import warnings
 import numpy as np
 
-from sklearn.utils.class_weight import compute_class_weight
-
-from scope import SCoPE
+from scope import SCoPEDistances as SCoPE
 from scope.utils.eval_metrics import predictions_to_report
+
+from scope.utils.plot import (
+    plot_confusion_matrix,
+    plot_auc_roc,
+)
 
 from utils.settings import GetSettings
 from utils.combinations import all_subsets_str
 from utils.dataset import load_dataset, build_dataset_by_sample, build_dataset_variable
-from utils.plots import plot_confusion_matrix, plot_correct_predictions_by_class, plot_auc_roc
+from utils.plots import plot_correct_predictions_by_class
 
 from utils.search.report import save_search_results
 from utils.search.scope import grid_search
@@ -25,7 +28,7 @@ def set_seed(seed: int):
 
 
 def print_results(report) -> None:
-    print(f"\nResultados finales en test:")
+    print("\nResultados finales en test:")
     print(f"  auc_roc              : {report['auc_roc']}")
     print(f"  f1              : {report['f1']}")
     print(f"  mcc              : {report['mcc']}")
@@ -69,23 +72,22 @@ def _search(
     search_supports: list[dict],
     report_path: str,
 ) -> SCoPE:
-    # weights = compute_class_weight(
-    #     class_weight="balanced",
-    #     classes=np.unique(search_y),
-    #     y=search_y,
-    # )
-    # class_weights = dict(enumerate(weights))
-
     all_compressors = [
         selection.split(",")
         for selection in all_subsets_str(
             ["bz2", "zlib", "gzip",]
         )
     ]
+    all_dissimilarity_metrics = [
+        selection.split(",")
+        for selection in all_subsets_str(
+            ["ncd", "cdm", "clm",]
+        )
+    ]
     param_grid = {
         "compressors": all_compressors,
         "keep_similar": [True, False],
-        # "class_weights": [None, class_weights],
+        "dissimilarity_metrics": all_dissimilarity_metrics,
     }
 
     results = grid_search(
@@ -153,7 +155,7 @@ def _test(
     plot_correct_predictions_by_class(
         predictions=predictions,
         y_true=test_y,
-        n_per_class=3,
+        n_per_class=5,
         save_dir=plot_path,
     )
     plot_auc_roc(
@@ -196,7 +198,7 @@ def search_scope_variable(
     )
 
     print("\n")
-    print(f"# Samples: Variable")
+    print("# Samples: Variable")
     print("=" * 120)
 
     best_model = _search(
@@ -287,7 +289,7 @@ def search_scope_sample(
 
 
 if __name__ == "__main__":
-    settings = GetSettings("settings/clintox.toml")
+    settings = GetSettings("settings/bace.toml")
 
     random_seed = settings.experiment.random_seed
     sample_sizes = settings.experiment.sample_sizes

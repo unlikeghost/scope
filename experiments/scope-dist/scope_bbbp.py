@@ -14,7 +14,7 @@ from scope.utils.plot import (
 from utils.settings import GetSettings
 from utils.combinations import all_subsets_str
 from utils.dataset import load_dataset, build_dataset_by_sample, build_dataset_variable
-from utils.plots import plot_confusion_matrix, plot_correct_predictions_by_class, plot_auc_roc
+from utils.plots import plot_correct_predictions_by_class
 
 from utils.search.report import save_search_results
 from utils.search.scope import grid_search
@@ -289,7 +289,7 @@ def search_scope_sample(
 
 
 if __name__ == "__main__":
-    settings = GetSettings("settings/bace.toml")
+    settings = GetSettings("settings/bbbp.toml")
 
     random_seed = settings.experiment.random_seed
     sample_sizes = settings.experiment.sample_sizes

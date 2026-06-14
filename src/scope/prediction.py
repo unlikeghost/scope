@@ -19,7 +19,7 @@ class Prediction:
 
 
 @dataclass(frozen=True)
-class PoligonPrediction(Prediction):
+class PolygonPrediction(Prediction):
     convex_hull_clusters: Dict[int, BaseGeometry]
     convex_hull_queries: Dict[int, BaseGeometry]
     query_points: Dict[int, np.ndarray]

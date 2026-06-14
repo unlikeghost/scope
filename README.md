@@ -80,7 +80,7 @@ The minimum score obtained for each feature across all classes is used as a vote
 ![Prediction Model](diagrams/done/SCoPE%20distances%20(done).png)
 
 
-*(Note: Spatial evaluation approaches using Convex Hulls, such as `SCoPEPoligon`, are currently planned for future work).*
+*(Note: Spatial evaluation approaches using Convex Hulls, such as `SCoPEPolygon`, are currently planned for future work).*
 
 ## 📊 Experimental Results
 

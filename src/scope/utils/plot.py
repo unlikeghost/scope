@@ -10,34 +10,33 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from ..prediction import PoligonPrediction, DistPrediction
-
+from ..prediction import PolygonPrediction, DistPrediction
 
 def plot_polygon_prediction(
-    prediction: PoligonPrediction,
+    prediction: PolygonPrediction,
     show: bool = False,
     save_path: str | None = None,
+    cmap: str = 'flare',
 ) -> None:
 
     n_cols = len(prediction.scores)
-    keys = prediction.scores.keys()
+    keys = list(prediction.scores.keys())
 
-    colors = ['red', 'blue', 'green', 'orange', 'purple']
+    cmap_object = sns.color_palette(cmap, as_cmap=True)
+    QUERY_COLOR = cmap_object(0.15)
+    CLUSTER_COLOR = cmap_object(0.85)
 
     fig, ax = plt.subplots(
-        nrows=1, ncols=n_cols, figsize=(20, 10), sharex=False,
+        nrows=1, ncols=n_cols, figsize=(n_cols * 10, 8), layout='tight'
     )
+    fig.set_layout_engine(layout='tight', w_pad=3)
+
+    if n_cols == 1:
+        ax = [ax]
 
     for index, key in enumerate(keys):
 
-        # Plot the convex hulls
-        ax[index].plot(
-            *prediction.convex_hull_clusters[key].exterior.xy, # noqa
-            color=colors[index],
-            linewidth=2,
-            linestyle='--',
-            label=f"Convex Hull Cluster"
-        )
+        hull_cluster_x, hull_cluster_y = prediction.convex_hull_clusters[key].exterior.xy
 
         geom = prediction.convex_hull_queries[key]
         if hasattr(geom, 'exterior'):
@@ -45,63 +44,83 @@ def plot_polygon_prediction(
         else:
             x, y = geom.xy
 
+        # Query hull — naranja, abajo
+        ax[index].fill(x, y, color=QUERY_COLOR, alpha=0.10, zorder=2)
         ax[index].plot(
             x, y,
-            color=colors[index],
-            linewidth=2,
-            linestyle='-',
-            label="Convex Hull Query"
-        )
-        # Plot the centroids
-        ax[index].scatter(
-            prediction.convex_hull_clusters[key].centroid.x,
-            prediction.convex_hull_clusters[key].centroid.y,
-            marker='x',
-            color='black',
-            s=100,
-            label='Cluster Centroid'
-        )
-        ax[index].scatter(
-            prediction.convex_hull_queries[key].centroid.x,
-            prediction.convex_hull_queries[key].centroid.y,
-            marker='+',
-            color='black',
-            s=100,
-            label='Query Centroid'
+            color=QUERY_COLOR, linewidth=2.5, linestyle='--',
+            label="Convex Hull Query", zorder=3
         )
 
-        # Plot the query points
+        ax[index].fill(
+            hull_cluster_x, hull_cluster_y,
+            color=CLUSTER_COLOR, alpha=0.07, zorder=4
+        )
+
         ax[index].scatter(
             prediction.query_points[key][:, 0],
             prediction.query_points[key][:, 1],
-            color='red',
-            label='Query Points',
-            s=30
+            color=QUERY_COLOR, label='Query Points',
+            s=70
         )
 
+        ax[index].plot(
+            hull_cluster_x, hull_cluster_y,
+            color=CLUSTER_COLOR, linewidth=2.5, linestyle='-',
+            label="Convex Hull Cluster", zorder=6
+        )
+
+        ax[index].scatter(
+            prediction.convex_hull_clusters[key].centroid.x,
+            prediction.convex_hull_clusters[key].centroid.y,
+            marker='o', facecolors='none', edgecolors=CLUSTER_COLOR,
+            s=180, linewidths=2.5,
+            label='Cluster Centroid', zorder=7
+        )
+
+        ax[index].scatter(
+            prediction.convex_hull_queries[key].centroid.x,
+            prediction.convex_hull_queries[key].centroid.y,
+            marker='D', color=QUERY_COLOR,
+            s=90, linewidths=0,
+            label='Query Centroid', zorder=7
+        )
+        
         ax[index].set_title(
-            f"Cluster {key}\n"
-            f"Prediction score = {prediction.scores[key]:.2f}"
+            f"Cluster {key}  ·  Score {prediction.scores[key]:.2f}",
+            fontsize=12, color='#444444', pad=8
         )
-        ax[index].set_xlabel('NCD')
-        ax[index].set_ylabel('CDM')
-        ax[index].set_aspect('equal', adjustable='box')
-        ax[index].legend()
-        ax[index].grid(
-            True,
-            linestyle=':', alpha=0.6
+        ax[index].set_xlabel('Dissimilarity Metric 1', fontsize=9, color='#444444')
+        ax[index].set_ylabel('Dissimilarity Metric 2', fontsize=9, color='#444444')
+
+        ax[index].spines[['top', 'right']].set_visible(False)
+        ax[index].spines['left'].set_linewidth(0.8)
+        ax[index].spines['bottom'].set_linewidth(0.8)
+
+        ax[index].tick_params(axis='both', labelsize=9, labelcolor='#444444', length=0)
+
+        ax[index].grid(alpha=0.3, linewidth=0.6, color='gray')
+        ax[index].set_axisbelow(True)
+
+        ax[index].legend(
+            loc='upper center',
+            bbox_to_anchor=(0.5, -0.08),
+            ncols=3,
+            fontsize=8,
+            framealpha=0.3,
+            labelspacing=0.8,
+            handlelength=2.0,
+            handletextpad=0.6,
+            borderpad=0.8,
+            columnspacing=1.5,
         )
 
-    plt.tight_layout()
     if show:
         plt.show()
 
     if save_path:
-        plt.savefig(
-            save_path,
-            dpi=300,
-            bbox_inches='tight'
-        )
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+
     plt.close(fig)
 
 

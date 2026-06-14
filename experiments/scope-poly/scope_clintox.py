@@ -3,7 +3,7 @@ import random
 import warnings
 import numpy as np
 
-from scope import SCoPEDistances as SCoPE
+from scope import SCoPEPolygon as SCoPE
 from scope.utils.eval_metrics import predictions_to_report
 
 from scope.utils.plot import (
@@ -14,10 +14,11 @@ from scope.utils.plot import (
 from utils.settings import GetSettings
 from utils.combinations import all_subsets_str
 from utils.dataset import load_dataset, build_dataset_by_sample, build_dataset_variable
-from utils.plots import plot_confusion_matrix, plot_correct_predictions_by_class, plot_auc_roc
 
 from utils.search.report import save_search_results
 from utils.search.scope import grid_search
+from utils.plots import plot_correct_predictions_by_class
+
 
 warnings.filterwarnings("ignore")
 
@@ -78,12 +79,16 @@ def _search(
             ["bz2", "zlib", "gzip",]
         )
     ]
-    all_dissimilarity_metrics = [
+    dissimilarity_comb = [
         selection.split(",")
         for selection in all_subsets_str(
             ["ncd", "cdm", "clm",]
         )
     ]
+    all_dissimilarity_metrics =  list(
+        filter(lambda w: len(w) == 2, dissimilarity_comb)
+    )
+
     param_grid = {
         "compressors": all_compressors,
         "keep_similar": [True, False],

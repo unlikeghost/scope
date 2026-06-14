@@ -29,3 +29,6 @@ experiments = [
     "shapely>=2.1.2",
     "tqdm>=4.67.3",
 ]
+sentiment = [
+    "torchtext>=0.6.0",
+]

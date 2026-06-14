@@ -1,5 +1,5 @@
-from .model import SCoPEPoligon
-from .model import SCoPEDistances
+from .scope_dist import SCoPEDistances
+from .scope_poly import SCoPEPolygon
 from .compression import DissimilarityMatrix
 from .utils import (
     plot_polygon_prediction,
